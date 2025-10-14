@@ -6,9 +6,7 @@ edition = "2024"
 description = ""
 
 [package.metadata.wdk.driver-model]
-driver-type = "KMDF"
-kmdf-version-major = 1
-target-kmdf-version-minor = 33
+driver-type = "WDM"
 
 [lib]
 crate-type = ["cdylib"]

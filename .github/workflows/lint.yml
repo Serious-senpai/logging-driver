@@ -1,0 +1,54 @@
+name: Lint
+
+on: [ push, pull_request ]
+
+permissions:
+  contents: read
+
+jobs:
+  rustfmt:
+    name: Run rustfmt
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly,1.90
+          components: clippy,rustfmt
+          cache: false
+
+      - name: Setup repository
+        run: cargo install --locked cargo-make --no-default-features --features tls-native
+
+      - name: Run rustfmt via cargo fmt
+        shell: cmd
+        run: |
+          set LIBCLANG_PATH=%cd%\extern\clang-llvm-21.1.3
+          cargo +nightly fmt -- --check
+
+  clippy:
+    name: Run clippy
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly,1.90
+          components: clippy,rustfmt
+          cache: false
+
+      - name: Setup repository
+        run: cargo install --locked cargo-make --no-default-features --features tls-native
+
+      - name: Run clippy
+        shell: cmd
+        run: |
+          set LIBCLANG_PATH=%cd%\extern\clang-llvm-21.1.3
+          cargo clippy --all-features --no-deps -- -D warnings
