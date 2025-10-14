@@ -28,7 +28,7 @@ jobs:
         shell: cmd
         run: |
           set LIBCLANG_PATH=%cd%\extern\clang-llvm-21.1.3
-          cargo make
+          cargo make -v
           cargo make default --release
 
       - name: Upload build artifacts
