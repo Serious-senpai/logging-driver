@@ -13,6 +13,8 @@ static GLOBAL_ALLOCATOR: WdkAllocator = WdkAllocator;
 use wdk::println;
 use wdk_sys::{NTSTATUS, PCUNICODE_STRING, PDRIVER_OBJECT};
 
+/// # Safety
+/// This is the entry point for the driver. It must be called by the OS.
 #[unsafe(export_name = "DriverEntry")]
 pub unsafe extern "system" fn driver_entry(
     driver: PDRIVER_OBJECT,
@@ -26,6 +28,8 @@ pub unsafe extern "system" fn driver_entry(
     0
 }
 
+/// # Safety
+/// This is the unload function for the driver. It must be called by the OS.
 pub unsafe extern "C" fn driver_unload(driver: PDRIVER_OBJECT) {
     let driver = unsafe { *driver };
     let name = driver.DriverName;

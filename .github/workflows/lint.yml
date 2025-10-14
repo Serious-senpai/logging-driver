@@ -19,6 +19,7 @@ jobs:
           toolchain: nightly,1.90
           components: clippy,rustfmt
           cache: false
+          rustflags: ""
 
       - name: Setup repository
         run: cargo install --locked cargo-make --no-default-features --features tls-native
@@ -43,6 +44,7 @@ jobs:
           toolchain: nightly,1.90
           components: clippy,rustfmt
           cache: false
+          rustflags: ""
 
       - name: Setup repository
         run: cargo install --locked cargo-make --no-default-features --features tls-native
