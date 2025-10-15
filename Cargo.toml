@@ -6,9 +6,7 @@ edition = "2024"
 description = ""
 
 [package.metadata.wdk.driver-model]
-driver-type = "KMDF"
-kmdf-version-major = 1
-target-kmdf-version-minor = 15
+driver-type = "WDM"
 
 [lib]
 crate-type = ["cdylib"]
@@ -34,3 +32,32 @@ opt-level = 3
 overflow-checks = false
 panic = "abort"
 strip = true
+
+[lints.clippy]
+absolute_paths = "warn"
+assigning_clones = "warn"
+bool_to_int_with_if = "warn"
+branches_sharing_code = "warn"
+cast_lossless = "warn"
+cloned_instead_of_copied = "warn"
+collection_is_never_read = "warn"
+elidable_lifetime_names = "warn"
+empty_enum_variants_with_brackets = "warn"
+empty_structs_with_brackets = "warn"
+if_not_else = "warn"
+implicit_clone = "warn"
+inconsistent_struct_constructor = "warn"
+inefficient_to_string = "warn"
+manual_instant_elapsed = "warn"
+manual_string_new = "warn"
+map_unwrap_or = "warn"
+match_bool = "warn"
+match_same_arms = "warn"
+needless_collect = "warn"
+needless_continue = "warn"
+string_to_string = "warn"
+suboptimal_flops = "warn"
+too_many_arguments = "allow"
+trait_duplication_in_bounds = "warn"
+use_self = "warn"
+wildcard_imports = "warn"
