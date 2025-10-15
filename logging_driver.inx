@@ -5,8 +5,8 @@
 
 [Version]
 Signature   = "$WINDOWS NT$"
-Class       = LoggingDriverDevice
-ClassGuid   = {F97C61C6-E70F-4331-8F36-099856E39268}
+Class       = System
+ClassGuid   = {4d36e97d-e325-11ce-bfc1-08002be10318}
 Provider    = %ProviderString%
 PnpLockDown = 1
 
@@ -19,22 +19,13 @@ DefaultDestDir = 13
 [SourceDisksFiles]
 logging_driver.sys = 1,,
 
-; ================= Class section =====================
-
-[ClassInstall32]
-Addreg=LoggingClassReg
-
-[LoggingClassReg]
-HKR,,,0,%ClassName%
-HKR,,Icon,,-5
-
 ; ================= Install section =================
 
 [Manufacturer]
 %StdMfg%=Standard,NT$ARCH$.10.0...16299
 
 [Standard.NT$ARCH$.10.0...16299]
-%DeviceDesc%=LoggingDriverDevice, root\LOGGING_DRIVER
+%DeviceDesc%=LoggingDriverDevice, Root\LogDrvDev
 
 [LoggingDriverDevice.NT$ARCH$]
 CopyFiles=Drivers_Dir
@@ -49,7 +40,7 @@ AddService = LoggingDriverService, %SPSVCINST_ASSOCSERVICE%, Logging_Driver_Serv
 [Logging_Driver_Service_Install]
 DisplayName    = %ServiceDesc%
 ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
-StartType      = 3               ; SERVICE_DEMAND_START 
+StartType      = 3               ; SERVICE_DEMAND_START - good for development, change to 2 to start on boot
 ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
 ServiceBinary  = %13%\logging_driver.sys
 
