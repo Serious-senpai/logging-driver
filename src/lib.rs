@@ -23,9 +23,9 @@ use wdk_sys::ntddk::{
     IoCreateDevice, IoCreateSymbolicLink, IoDeleteDevice, IoDeleteSymbolicLink, IofCompleteRequest,
 };
 use wdk_sys::{
-    DRIVER_OBJECT, FILE_DEVICE_SECURE_OPEN, FILE_DEVICE_UNKNOWN, IO_NO_INCREMENT, NT_SUCCESS,
-    NTSTATUS, PCUNICODE_STRING, PDEVICE_OBJECT, PDRIVER_DISPATCH, PDRIVER_OBJECT, PIRP,
-    STATUS_INVALID_PARAMETER, STATUS_SUCCESS,
+    DRIVER_OBJECT, FILE_DEVICE_SECURE_OPEN, FILE_DEVICE_UNKNOWN, IO_NO_INCREMENT, IRP_MJ_READ,
+    IRP_MJ_WRITE, NT_SUCCESS, NTSTATUS, PCUNICODE_STRING, PDEVICE_OBJECT, PDRIVER_DISPATCH,
+    PDRIVER_OBJECT, PIRP, STATUS_INVALID_DEVICE_REQUEST, STATUS_INVALID_PARAMETER, STATUS_SUCCESS,
 };
 
 use crate::display::Displayable;
@@ -149,16 +149,21 @@ unsafe extern "C" fn _irp_handler(_: PDEVICE_OBJECT, irp: PIRP) -> NTSTATUS {
         }
     };
 
-    match unsafe { IoGetCurrentIrpStackLocation(irp).as_ref() } {
+    let status = match unsafe { IoGetCurrentIrpStackLocation(irp).as_ref() } {
         Some(stack) => {
             log!("Received IRP {}", stack.MajorFunction);
+            match stack.MajorFunction.into() {
+                IRP_MJ_READ | IRP_MJ_WRITE => STATUS_SUCCESS,
+                _ => STATUS_INVALID_DEVICE_REQUEST,
+            }
         }
         None => {
             log!("Received unknown IRP");
+            STATUS_INVALID_PARAMETER
         }
-    }
+    };
 
-    irp.IoStatus.__bindgen_anon_1.Status = STATUS_SUCCESS;
+    irp.IoStatus.__bindgen_anon_1.Status = status;
     irp.IoStatus.Information = 0;
     unsafe {
         IofCompleteRequest(
@@ -169,5 +174,5 @@ unsafe extern "C" fn _irp_handler(_: PDEVICE_OBJECT, irp: PIRP) -> NTSTATUS {
         );
     }
 
-    STATUS_SUCCESS
+    status
 }
