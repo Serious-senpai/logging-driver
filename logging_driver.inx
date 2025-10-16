@@ -4,11 +4,11 @@
 ;===================================================================
 
 [Version]
-Signature   = "$WINDOWS NT$"
-Class       = System
-ClassGuid   = {4d36e97d-e325-11ce-bfc1-08002be10318}
-Provider    = %ProviderString%
-PnpLockDown = 1
+Signature       = "$WINDOWS NT$"
+Class           = System
+ClassGuid       = {4d36e97d-e325-11ce-bfc1-08002be10318}
+Provider        = %ProviderString%
+PnpLockDown     = 1
 
 [DestinationDirs]
 DefaultDestDir = 13
@@ -27,14 +27,14 @@ logging_driver.sys = 1,,
 [Standard.NT$ARCH$.10.0...16299]
 %DeviceDesc%=LoggingDriverDevice, Root\LogDrvDev
 
-[LoggingDriverDevice.NT$ARCH$]
+[LoggingDriverDevice]
 CopyFiles=Drivers_Dir
 
 [Drivers_Dir]
 logging_driver.sys
 
 ; ================= Service installation =================
-[LoggingDriverDevice.NT$ARCH$.Services]
+[LoggingDriverDevice.Services]
 AddService = LoggingDriverService, %SPSVCINST_ASSOCSERVICE%, Logging_Driver_Service_Install
 
 [Logging_Driver_Service_Install]
