@@ -1,9 +1,9 @@
 #[macro_export]
 macro_rules! log {
     () => {
-        wdk::println!("[LoggingDriver] \n");
+        wdk::println!("[LoggingDriver]");
     };
     ($($arg:tt)*) => {
-        wdk::println!("{}\n", format_args!($($arg)*));
+        wdk::println!("[LoggingDriver] {}", format_args!($($arg)*));
     };
 }
