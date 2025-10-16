@@ -1,24 +1,19 @@
 #![no_std]
 
+pub mod display;
+pub mod error;
+pub mod log;
+pub mod wrappers;
+
+extern crate alloc;
 #[cfg(not(test))]
 extern crate wdk_panic;
 
-extern crate alloc;
 use alloc::string::String;
-mod bindings;
-mod display;
-mod log;
-mod unicode;
 use core::{ffi::CStr, ptr::null_mut};
 
 #[cfg(not(test))]
 use wdk_alloc::WdkAllocator;
-
-#[cfg(not(test))]
-#[global_allocator]
-static GLOBAL_ALLOCATOR: WdkAllocator = WdkAllocator;
-
-use bindings::IoGetCurrentIrpStackLocation;
 use wdk_sys::ntddk::{
     IoCreateDevice, IoCreateSymbolicLink, IoDeleteDevice, IoDeleteSymbolicLink, IofCompleteRequest,
 };
@@ -26,18 +21,25 @@ use wdk_sys::{
     DRIVER_OBJECT, FILE_DEVICE_SECURE_OPEN, FILE_DEVICE_UNKNOWN, IO_NO_INCREMENT, IRP_MJ_READ,
     IRP_MJ_WRITE, NT_SUCCESS, NTSTATUS, PCUNICODE_STRING, PDEVICE_OBJECT, PDRIVER_DISPATCH,
     PDRIVER_OBJECT, PIRP, STATUS_INVALID_DEVICE_REQUEST, STATUS_INVALID_PARAMETER, STATUS_SUCCESS,
+    STATUS_UNSUCCESSFUL,
 };
 
 use crate::display::Displayable;
-use crate::unicode::UnicodeString;
+use crate::error::RuntimeError;
+use crate::wrappers::bindings::IoGetCurrentIrpStackLocation;
+use crate::wrappers::strings::UnicodeString;
+
+#[cfg(not(test))]
+#[global_allocator]
+static GLOBAL_ALLOCATOR: WdkAllocator = WdkAllocator;
 
 const DOS_NAME: &CStr = c"\\DosDevices\\LogDrvDev";
 const DEVICE_NAME: &CStr = c"\\Device\\LogDrvDev";
 
-fn _delete_device(driver: &DRIVER_OBJECT) {
-    let mut dos_name = UnicodeString::from(DOS_NAME);
+fn _delete_device(driver: &DRIVER_OBJECT) -> Result<(), RuntimeError> {
+    let mut dos_name = UnicodeString::try_from(DOS_NAME)?;
 
-    let status = unsafe { IoDeleteSymbolicLink(&mut dos_name.native) };
+    let status = unsafe { IoDeleteSymbolicLink(dos_name.native_mut_ptr()) };
     if !NT_SUCCESS(status) {
         log!("Failed to remove symlink: {status}");
     }
@@ -48,6 +50,8 @@ fn _delete_device(driver: &DRIVER_OBJECT) {
             IoDeleteDevice(device);
         }
     }
+
+    Ok(())
 }
 
 fn _set_driver_callback(driver: &mut DRIVER_OBJECT, irp_code: u32, callback: PDRIVER_DISPATCH) {
@@ -59,22 +63,11 @@ fn _set_driver_callback(driver: &mut DRIVER_OBJECT, irp_code: u32, callback: PDR
     }
 }
 
-/// # Safety
-/// Must be called by the OS.
-#[unsafe(export_name = "DriverEntry")]
-pub unsafe extern "system" fn driver_entry(
-    driver: PDRIVER_OBJECT,
+fn _driver_entry(
+    driver: &mut DRIVER_OBJECT,
     registry_path: PCUNICODE_STRING,
-) -> NTSTATUS {
-    let driver = match unsafe { driver.as_mut() } {
-        Some(d) => d,
-        None => {
-            log!("driver_entry: PDRIVER_OBJECT is null");
-            return STATUS_INVALID_PARAMETER;
-        }
-    };
-
-    driver.DriverUnload = Some(_driver_unload);
+) -> Result<(), RuntimeError> {
+    driver.DriverUnload = Some(driver_unload);
     for handler in driver.MajorFunction.iter_mut() {
         *handler = Some(_irp_handler);
     }
@@ -92,15 +85,15 @@ pub unsafe extern "system" fn driver_entry(
         driver.DriverName.display(),
     );
 
-    let mut dos_name = UnicodeString::from(DOS_NAME);
-    let mut device_name = UnicodeString::from(DEVICE_NAME);
+    let mut dos_name = UnicodeString::try_from(DOS_NAME)?;
+    let mut device_name = UnicodeString::try_from(DEVICE_NAME)?;
 
     let mut device = null_mut();
     let status = unsafe {
         IoCreateDevice(
             driver,
             0,
-            &mut device_name.native,
+            device_name.native_mut_ptr(),
             FILE_DEVICE_UNKNOWN,
             FILE_DEVICE_SECURE_OPEN,
             0,
@@ -109,23 +102,57 @@ pub unsafe extern "system" fn driver_entry(
     };
     if !NT_SUCCESS(status) {
         log!("Failed to create device: {status}");
-        return status;
+        return Err(RuntimeError::Failure(status));
     }
 
-    let status = unsafe { IoCreateSymbolicLink(&mut dos_name.native, &mut device_name.native) };
+    let status =
+        unsafe { IoCreateSymbolicLink(dos_name.native_mut_ptr(), device_name.native_mut_ptr()) };
     if !NT_SUCCESS(status) {
         log!("Failed to create symbolic link: {status}");
-        _delete_device(driver);
-        return status;
+        _delete_device(driver)?;
+        return Err(RuntimeError::Failure(status));
     }
 
-    STATUS_SUCCESS
+    Ok(())
+}
+
+fn _driver_unload(driver: &mut DRIVER_OBJECT) -> Result<(), RuntimeError> {
+    log!("driver_unload {:?}", driver.DriverName.display());
+    _delete_device(driver)?;
+    Ok(())
 }
 
 /// # Safety
 /// Must be called by the OS.
-unsafe extern "C" fn _driver_unload(driver: PDRIVER_OBJECT) {
-    let driver = match unsafe { driver.as_ref() } {
+#[unsafe(export_name = "DriverEntry")]
+pub unsafe extern "C" fn driver_entry(
+    driver: PDRIVER_OBJECT,
+    registry_path: PCUNICODE_STRING,
+) -> NTSTATUS {
+    let driver = match unsafe { driver.as_mut() } {
+        Some(d) => d,
+        None => {
+            log!("driver_entry: PDRIVER_OBJECT is null");
+            return STATUS_INVALID_PARAMETER;
+        }
+    };
+
+    match _driver_entry(driver, registry_path) {
+        Ok(()) => STATUS_SUCCESS,
+        Err(e) => {
+            log!("Error when loading driver: {e}");
+            match e {
+                RuntimeError::Failure(status) => status,
+                _ => STATUS_UNSUCCESSFUL,
+            }
+        }
+    }
+}
+
+/// # Safety
+/// Must be called by the OS.
+unsafe extern "C" fn driver_unload(driver: PDRIVER_OBJECT) {
+    let driver = match unsafe { driver.as_mut() } {
         Some(d) => d,
         None => {
             log!("driver_unload: PDRIVER_OBJECT is null");
@@ -133,9 +160,9 @@ unsafe extern "C" fn _driver_unload(driver: PDRIVER_OBJECT) {
         }
     };
 
-    log!("driver_unload {:?}", driver.DriverName.display());
-
-    _delete_device(driver);
+    if let Err(e) = _driver_unload(driver) {
+        log!("Error when unloading driver: {e}");
+    }
 }
 
 /// # Safety
