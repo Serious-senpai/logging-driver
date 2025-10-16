@@ -15,9 +15,9 @@ impl From<&CStr> for UnicodeString {
     fn from(value: &CStr) -> Self {
         let mut native = UNICODE_STRING::default();
         let buffer = value
-            .to_bytes_with_nul()
-            .iter()
-            .map(|c| *c as u16)
+            .to_string_lossy()
+            .encode_utf16()
+            .chain(Some(0))
             .collect::<Vec<u16>>();
 
         unsafe { RtlInitUnicodeString(&mut native, buffer.as_ptr()) };
