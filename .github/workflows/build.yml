@@ -22,7 +22,11 @@ jobs:
           rustflags: ""
 
       - name: Setup repository
-        run: cargo install --locked cargo-make --no-default-features --features tls-native
+        shell: cmd
+        run: |
+          extern\winsdksetup.exe /features + /q
+          extern\wdksetup.exe /features + /q
+          cargo install --locked cargo-make --no-default-features --features tls-native
 
       - name: Build kernel driver
         shell: cmd
