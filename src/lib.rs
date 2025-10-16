@@ -19,10 +19,12 @@ use wdk_alloc::WdkAllocator;
 static GLOBAL_ALLOCATOR: WdkAllocator = WdkAllocator;
 
 use bindings::IoGetCurrentIrpStackLocation;
-use wdk_sys::ntddk::{IoCreateDevice, IoCreateSymbolicLink, IoDeleteDevice, IoDeleteSymbolicLink};
+use wdk_sys::ntddk::{
+    IoCreateDevice, IoCreateSymbolicLink, IoDeleteDevice, IoDeleteSymbolicLink, IofCompleteRequest,
+};
 use wdk_sys::{
-    DRIVER_OBJECT, FILE_DEVICE_SECURE_OPEN, FILE_DEVICE_UNKNOWN, NT_SUCCESS, NTSTATUS,
-    PCUNICODE_STRING, PDEVICE_OBJECT, PDRIVER_DISPATCH, PDRIVER_OBJECT, PIRP,
+    DRIVER_OBJECT, FILE_DEVICE_SECURE_OPEN, FILE_DEVICE_UNKNOWN, IO_NO_INCREMENT, NT_SUCCESS,
+    NTSTATUS, PCUNICODE_STRING, PDEVICE_OBJECT, PDRIVER_DISPATCH, PDRIVER_OBJECT, PIRP,
     STATUS_INVALID_PARAMETER, STATUS_SUCCESS,
 };
 
@@ -139,13 +141,32 @@ unsafe extern "C" fn _driver_unload(driver: PDRIVER_OBJECT) {
 /// # Safety
 /// Must be called by the OS.
 unsafe extern "C" fn _irp_handler(_: PDEVICE_OBJECT, irp: PIRP) -> NTSTATUS {
+    let irp = match unsafe { irp.as_mut() } {
+        Some(i) => i,
+        None => {
+            log!("irp_handler: PIRP is null");
+            return STATUS_INVALID_PARAMETER;
+        }
+    };
+
     match unsafe { IoGetCurrentIrpStackLocation(irp).as_ref() } {
         Some(stack) => {
-            log!("[IRP {}] {irp:?}", stack.MajorFunction);
+            log!("Received IRP {}", stack.MajorFunction);
         }
         None => {
-            log!("[IRP unknown] {irp:?}");
+            log!("Received unknown IRP");
         }
+    }
+
+    irp.IoStatus.__bindgen_anon_1.Status = STATUS_SUCCESS;
+    irp.IoStatus.Information = 0;
+    unsafe {
+        IofCompleteRequest(
+            irp,
+            IO_NO_INCREMENT
+                .try_into()
+                .expect("IO_NO_INCREMENT must fit into i8"),
+        );
     }
 
     STATUS_SUCCESS
