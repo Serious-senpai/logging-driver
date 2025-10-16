@@ -38,4 +38,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build
-          path: target\release\logging_driver_package
+          path: target/release/logging_driver_package
