@@ -4,7 +4,7 @@
 extern crate wdk_panic;
 
 extern crate alloc;
-use alloc::string::ToString;
+use alloc::string::String;
 mod bindings;
 mod display;
 mod log;
@@ -83,7 +83,7 @@ pub unsafe extern "system" fn driver_entry(
         Some(r) => r.display(),
         None => {
             log!("driver_entry: registry_path is null");
-            "".to_string()
+            String::new()
         }
     };
 
