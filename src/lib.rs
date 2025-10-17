@@ -1,6 +1,6 @@
 #![no_std]
 
-pub mod display;
+pub mod displayer;
 pub mod error;
 pub mod log;
 pub mod wrappers;
@@ -23,7 +23,7 @@ use wdk_sys::{
     STATUS_UNSUCCESSFUL,
 };
 
-use crate::display::Displayable;
+use crate::displayer::ForeignDisplayer;
 use crate::error::RuntimeError;
 use crate::wrappers::bindings::IoGetCurrentIrpStackLocation;
 use crate::wrappers::strings::UnicodeString;
@@ -73,7 +73,7 @@ fn _driver_entry(
 
     log!(
         "driver_entry {:?}, registry_path={registry_path}",
-        driver.DriverName.display(),
+        ForeignDisplayer::Unicode(&driver.DriverName),
     );
 
     let dos_name = UnicodeString::try_from(DOS_NAME)?;
@@ -112,7 +112,10 @@ fn _driver_entry(
 }
 
 fn _driver_unload(driver: &mut DRIVER_OBJECT) -> Result<(), RuntimeError> {
-    log!("driver_unload {:?}", driver.DriverName.display());
+    log!(
+        "driver_unload {:?}",
+        ForeignDisplayer::Unicode(&driver.DriverName),
+    );
     _delete_device(driver)?;
     Ok(())
 }
