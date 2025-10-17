@@ -1,5 +1,5 @@
 # logging-driver
-A suuuuuuuper simple Rust KMDF driver.
+A suuuuuuuper simple Rust WDM driver.
 
 ## Compile and running
 

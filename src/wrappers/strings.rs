@@ -2,7 +2,9 @@ extern crate alloc;
 
 use core::ffi::CStr;
 use core::marker::PhantomData;
+use core::{fmt, slice};
 
+use alloc::string::String;
 use wdk_sys::ntddk::{RtlAnsiStringToUnicodeString, RtlFreeUnicodeString, RtlInitAnsiString};
 use wdk_sys::{NT_SUCCESS, PASSIVE_LEVEL, PSTRING, PUNICODE_STRING, STRING, UNICODE_STRING};
 
@@ -34,7 +36,7 @@ impl TryFrom<&CStr> for UnicodeString {
         irql_requires(PASSIVE_LEVEL)?;
 
         let mut native = UNICODE_STRING::default();
-        let mut string = String::from(value);
+        let mut string = AnsiString::from(value);
         let status = unsafe {
             // `RtlAnsiStringToUnicodeString` allocates and copies the string (it must perform a deep copy to convert to UTF-16)
             // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlansistringtounicodestring
@@ -62,12 +64,12 @@ impl Drop for UnicodeString {
     }
 }
 
-pub struct String<'a> {
+pub struct AnsiString<'a> {
     _native: STRING,
     _phantom: PhantomData<&'a ()>,
 }
 
-impl String<'_> {
+impl AnsiString<'_> {
     pub fn native(&self) -> &STRING {
         &self._native
     }
@@ -80,7 +82,7 @@ impl String<'_> {
     }
 }
 
-impl<'a> From<&'a CStr> for String<'a> {
+impl<'a> From<&'a CStr> for AnsiString<'a> {
     fn from(value: &'a CStr) -> Self {
         let mut native = STRING::default();
         unsafe {
@@ -92,5 +94,14 @@ impl<'a> From<&'a CStr> for String<'a> {
             _native: native,
             _phantom: PhantomData,
         }
+    }
+}
+
+impl fmt::Display for UnicodeString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let string = String::from_utf16_lossy(unsafe {
+            slice::from_raw_parts(self._native.Buffer, usize::from(self._native.Length))
+        });
+        write!(f, "{string}")
     }
 }
