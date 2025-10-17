@@ -24,7 +24,7 @@ jobs:
       - name: Setup repository
         shell: cmd
         run: |
-          extern\wdksetup.exe /features + /q
+          extern\wdksetup.exe /features + /log "%cd%\target\wdksetup.log" /quiet
           cargo install --locked cargo-make --no-default-features --features tls-native
 
       - name: Build kernel driver
@@ -38,4 +38,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build
-          path: target/release/logging_driver_package
+          path: |
+            target/wdksetup.log
+            target/release/logging_driver_package
