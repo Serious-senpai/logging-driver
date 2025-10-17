@@ -1,4 +1,4 @@
-use core::fmt::{Display, Write};
+use core::fmt::Write;
 use core::{fmt, slice};
 use wdk_sys::UNICODE_STRING;
 
@@ -6,10 +6,10 @@ pub enum ForeignDisplayer<'a> {
     Unicode(&'a UNICODE_STRING),
 }
 
-impl Display for ForeignDisplayer<'_> {
+impl fmt::Display for ForeignDisplayer<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ForeignDisplayer::Unicode(s) => {
+            Self::Unicode(s) => {
                 let buffer = unsafe { slice::from_raw_parts(s.Buffer, usize::from(s.Length) - 1) };
                 for c in char::decode_utf16(buffer.iter().copied()) {
                     match c {
@@ -25,9 +25,6 @@ impl Display for ForeignDisplayer<'_> {
 
 impl fmt::Debug for ForeignDisplayer<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_char('"')?;
-        Display::fmt(&self, f)?;
-        f.write_char('"')?;
-        Ok(())
+        write!(f, "\"{}\"", self)
     }
 }
