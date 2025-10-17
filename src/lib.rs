@@ -9,7 +9,6 @@ extern crate alloc;
 #[cfg(not(test))]
 extern crate wdk_panic;
 
-use alloc::string::String;
 use core::{ffi::CStr, ptr::null_mut};
 
 #[cfg(not(test))]
@@ -37,9 +36,9 @@ const DOS_NAME: &CStr = c"\\DosDevices\\LogDrvDev";
 const DEVICE_NAME: &CStr = c"\\Device\\LogDrvDev";
 
 fn _delete_device(driver: &DRIVER_OBJECT) -> Result<(), RuntimeError> {
-    let mut dos_name = UnicodeString::try_from(DOS_NAME)?;
+    let dos_name = UnicodeString::try_from(DOS_NAME)?;
 
-    let status = unsafe { IoDeleteSymbolicLink(dos_name.native_mut_ptr()) };
+    let status = unsafe { IoDeleteSymbolicLink(&mut dos_name.native().into_inner()) };
     if !NT_SUCCESS(status) {
         log!("Failed to remove symlink: {status}");
     }
@@ -65,35 +64,27 @@ fn _set_driver_callback(driver: &mut DRIVER_OBJECT, irp_code: u32, callback: PDR
 
 fn _driver_entry(
     driver: &mut DRIVER_OBJECT,
-    registry_path: PCUNICODE_STRING,
+    registry_path: UnicodeString,
 ) -> Result<(), RuntimeError> {
     driver.DriverUnload = Some(driver_unload);
     for handler in driver.MajorFunction.iter_mut() {
         *handler = Some(_irp_handler);
     }
 
-    let registry_path = match unsafe { registry_path.as_ref() } {
-        Some(r) => r.display(),
-        None => {
-            log!("driver_entry: registry_path is null");
-            String::new()
-        }
-    };
-
     log!(
-        "driver_entry {:?}, registry_path={registry_path:?}",
+        "driver_entry {:?}, registry_path={registry_path}",
         driver.DriverName.display(),
     );
 
-    let mut dos_name = UnicodeString::try_from(DOS_NAME)?;
-    let mut device_name = UnicodeString::try_from(DEVICE_NAME)?;
+    let dos_name = UnicodeString::try_from(DOS_NAME)?;
+    let device_name = UnicodeString::try_from(DEVICE_NAME)?;
 
     let mut device = null_mut();
     let status = unsafe {
         IoCreateDevice(
             driver,
             0,
-            device_name.native_mut_ptr(),
+            &mut device_name.native().into_inner(),
             FILE_DEVICE_UNKNOWN,
             FILE_DEVICE_SECURE_OPEN,
             0,
@@ -105,8 +96,12 @@ fn _driver_entry(
         return Err(RuntimeError::Failure(status));
     }
 
-    let status =
-        unsafe { IoCreateSymbolicLink(dos_name.native_mut_ptr(), device_name.native_mut_ptr()) };
+    let status = unsafe {
+        IoCreateSymbolicLink(
+            &mut dos_name.native().into_inner(),
+            &mut device_name.native().into_inner(),
+        )
+    };
     if !NT_SUCCESS(status) {
         log!("Failed to create symbolic link: {status}");
         _delete_device(driver)?;
@@ -133,6 +128,14 @@ pub unsafe extern "C" fn driver_entry(
         Some(d) => d,
         None => {
             log!("driver_entry: PDRIVER_OBJECT is null");
+            return STATUS_INVALID_PARAMETER;
+        }
+    };
+
+    let registry_path = match unsafe { UnicodeString::from_raw(registry_path) } {
+        Ok(r) => r,
+        Err(e) => {
+            log!("driver_entry: failed to parse registry path: {e}");
             return STATUS_INVALID_PARAMETER;
         }
     };

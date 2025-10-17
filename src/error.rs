@@ -1,5 +1,5 @@
-use core::error::Error;
 use core::fmt;
+use core::{error::Error, num::TryFromIntError};
 
 use wdk_sys::{KIRQL, NTSTATUS};
 
@@ -7,6 +7,7 @@ use wdk_sys::{KIRQL, NTSTATUS};
 pub enum RuntimeError {
     Failure(NTSTATUS),
     InvalidIRQL(KIRQL),
+    ConversionError(TryFromIntError),
 }
 
 impl fmt::Display for RuntimeError {
@@ -14,8 +15,15 @@ impl fmt::Display for RuntimeError {
         match self {
             Self::Failure(status) => write!(f, "Operation failed with status {status}"),
             Self::InvalidIRQL(irql) => write!(f, "Invalid IRQL {irql}"),
+            Self::ConversionError(error) => write!(f, "Conversion error: {error}"),
         }
     }
 }
 
 impl Error for RuntimeError {}
+
+impl From<TryFromIntError> for RuntimeError {
+    fn from(value: TryFromIntError) -> Self {
+        Self::ConversionError(value)
+    }
+}

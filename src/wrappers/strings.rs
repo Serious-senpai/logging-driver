@@ -5,42 +5,70 @@ use core::marker::PhantomData;
 use core::{fmt, slice};
 
 use alloc::string::String;
-use wdk_sys::ntddk::{RtlAnsiStringToUnicodeString, RtlFreeUnicodeString, RtlInitAnsiString};
-use wdk_sys::{NT_SUCCESS, PASSIVE_LEVEL, PSTRING, PUNICODE_STRING, STRING, UNICODE_STRING};
+use alloc::vec;
+use alloc::vec::Vec;
+use wdk_sys::ntddk::{RtlAnsiStringToUnicodeString, RtlInitAnsiString};
+use wdk_sys::{NT_SUCCESS, PASSIVE_LEVEL, PCUNICODE_STRING, STRING, UNICODE_STRING};
 
 use crate::error::RuntimeError;
 use crate::wrappers::irql::irql_requires;
+use crate::wrappers::lifetime::Lifetime;
 
 pub struct UnicodeString {
     _native: UNICODE_STRING,
-    _drop: bool,
+    _buffer: Vec<u16>,
 }
 
-impl UnicodeString {
-    pub fn native(&self) -> &UNICODE_STRING {
-        &self._native
+impl<'a> UnicodeString {
+    pub fn native(&'a self) -> Lifetime<'a, UNICODE_STRING> {
+        Lifetime::new(self._native)
     }
 
     /// # Safety
-    /// This method must only be used to pass [`PUNICODE_STRING`] to native API calls. These API
-    /// calls must not mutate the underlying data in anyway.
-    pub unsafe fn native_mut_ptr(&mut self) -> PUNICODE_STRING {
-        &mut self._native
+    /// The pointer must point to a valid `UNICODE_STRING` structure or be null.
+    pub unsafe fn from_raw(value: PCUNICODE_STRING) -> Result<Self, RuntimeError> {
+        match unsafe { value.as_ref() } {
+            Some(s) => {
+                let buf = unsafe { slice::from_raw_parts(s.Buffer, usize::from(s.Length)) };
+
+                let new = buf.to_vec();
+                let length = u16::try_from(new.len())?;
+                Ok(Self {
+                    _native: UNICODE_STRING {
+                        Length: length,
+                        MaximumLength: length,
+                        Buffer: new.as_ptr() as *mut u16,
+                    },
+                    _buffer: new,
+                })
+            }
+            None => Ok(Self {
+                _native: UNICODE_STRING::default(),
+                _buffer: vec![],
+            }),
+        }
     }
 }
 
 impl TryFrom<&CStr> for UnicodeString {
     type Error = RuntimeError;
 
+    /// Convert a C-style ANSI string to a UTF-16 string (obviously a clone is performed).
     fn try_from(value: &CStr) -> Result<Self, Self::Error> {
         irql_requires(PASSIVE_LEVEL)?;
 
-        let mut native = UNICODE_STRING::default();
+        let mut buffer = vec![0u16; value.to_bytes_with_nul().len() * 2];
+        let mut native = UNICODE_STRING {
+            Length: 0,
+            MaximumLength: u16::try_from(buffer.len())?,
+            Buffer: buffer.as_mut_ptr(),
+        };
+
         let mut string = AnsiString::from(value);
         let status = unsafe {
             // `RtlAnsiStringToUnicodeString` allocates and copies the string (it must perform a deep copy to convert to UTF-16)
             // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlansistringtounicodestring
-            RtlAnsiStringToUnicodeString(&mut native, string.native_mut_ptr(), 1)
+            RtlAnsiStringToUnicodeString(&mut native, &mut string._native, 0)
         };
 
         if !NT_SUCCESS(status) {
@@ -49,18 +77,8 @@ impl TryFrom<&CStr> for UnicodeString {
 
         Ok(Self {
             _native: native,
-            _drop: true,
+            _buffer: buffer,
         })
-    }
-}
-
-impl Drop for UnicodeString {
-    fn drop(&mut self) {
-        if self._drop {
-            unsafe {
-                RtlFreeUnicodeString(&mut self._native);
-            }
-        }
     }
 }
 
@@ -69,20 +87,15 @@ pub struct AnsiString<'a> {
     _phantom: PhantomData<&'a ()>,
 }
 
-impl AnsiString<'_> {
-    pub fn native(&self) -> &STRING {
-        &self._native
-    }
-
-    /// # Safety
-    /// This method must only be used to pass [`PSTRING`] to native API calls. These API
-    /// calls must not mutate the underlying data in anyway.
-    pub unsafe fn native_mut_ptr(&mut self) -> PSTRING {
-        &mut self._native
+impl<'a> AnsiString<'a> {
+    pub fn native(&'a self) -> Lifetime<'a, STRING> {
+        Lifetime::new(self._native)
     }
 }
 
 impl<'a> From<&'a CStr> for AnsiString<'a> {
+    /// Create a native ANSI string wrapper around a C-style string. The resulting [`STRING`] only contains
+    /// a pointer to the original string data - no copy is performed.
     fn from(value: &'a CStr) -> Self {
         let mut native = STRING::default();
         unsafe {
