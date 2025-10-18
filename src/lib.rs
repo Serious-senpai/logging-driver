@@ -72,7 +72,7 @@ fn _driver_entry(
     }
 
     log!(
-        "driver_entry {:?}, registry_path={registry_path}",
+        "driver_entry {:?}, registry_path={registry_path:?}",
         ForeignDisplayer::Unicode(&driver.DriverName),
     );
 

@@ -1,7 +1,7 @@
 extern crate alloc;
 
 use core::ffi::CStr;
-use core::fmt::Display;
+use core::fmt::{Debug, Display};
 use core::marker::PhantomData;
 use core::{fmt, slice};
 
@@ -32,17 +32,19 @@ impl<'a> UnicodeString {
     pub unsafe fn from_raw(value: PCUNICODE_STRING) -> Result<Self, RuntimeError> {
         let new = match unsafe { value.as_ref() } {
             Some(s) => {
-                let buf = unsafe { slice::from_raw_parts(s.Buffer, usize::from(s.Length) + 1) };
-                buf.to_vec()
+                let buf = unsafe { slice::from_raw_parts(s.Buffer, usize::from(s.Length / 2)) };
+                let mut buf = buf.to_vec();
+                buf.push(0);
+                buf
             }
             None => vec![0],
         };
 
-        let length = u16::try_from(new.len())?;
+        let bytes_count = 2 * u16::try_from(new.len())?;
         Ok(Self {
             _native: UNICODE_STRING {
-                Length: length - 1,
-                MaximumLength: length,
+                Length: bytes_count - 2,
+                MaximumLength: bytes_count,
                 Buffer: new.as_ptr() as *mut u16,
             },
             _buffer: new,
@@ -57,10 +59,10 @@ impl TryFrom<&CStr> for UnicodeString {
     fn try_from(value: &CStr) -> Result<Self, Self::Error> {
         irql_requires(PASSIVE_LEVEL)?;
 
-        let mut buffer = vec![0u16; value.to_bytes_with_nul().len() * 2];
+        let mut buffer = vec![0; value.to_bytes_with_nul().len()];
         let mut native = UNICODE_STRING {
             Length: 0,
-            MaximumLength: u16::try_from(buffer.len())?,
+            MaximumLength: 2 * u16::try_from(buffer.len())?,
             Buffer: buffer.as_mut_ptr(),
         };
 
@@ -82,9 +84,15 @@ impl TryFrom<&CStr> for UnicodeString {
     }
 }
 
-impl fmt::Display for UnicodeString {
+impl Display for UnicodeString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         Display::fmt(&ForeignDisplayer::Unicode(&self._native), f)
+    }
+}
+
+impl Debug for UnicodeString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Debug::fmt(&ForeignDisplayer::Unicode(&self._native), f)
     }
 }
 
