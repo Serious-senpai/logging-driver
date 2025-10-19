@@ -1,5 +1,5 @@
 use core::marker::{PhantomData, PhantomPinned};
-use core::ops::Deref;
+use core::ops::{Deref, DerefMut};
 use core::pin::Pin;
 
 use alloc::boxed::Box;
@@ -21,6 +21,20 @@ impl<T> Lifetime<'_, T> {
     /// Bringing the inner value out of the lifetime wrapper may violate the lifetime contract.
     pub unsafe fn into_inner(self) -> T {
         self._value
+    }
+}
+
+impl<T> Deref for Lifetime<'_, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self._value
+    }
+}
+
+impl<T> DerefMut for Lifetime<'_, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self._value
     }
 }
 

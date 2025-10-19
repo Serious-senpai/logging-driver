@@ -1,17 +1,19 @@
 #![no_std]
 
+extern crate alloc;
+
 pub mod displayer;
 pub mod error;
 pub mod log;
 pub mod wrappers;
 
-extern crate alloc;
-#[cfg(not(test))]
+// #[cfg(not(test))]
 extern crate wdk_panic;
 
-use core::{ffi::CStr, ptr::null_mut};
+use core::ffi::CStr;
+use core::ptr::null_mut;
 
-#[cfg(not(test))]
+// #[cfg(not(test))]
 use wdk_alloc::WdkAllocator;
 use wdk_sys::ntddk::{
     IoCreateDevice, IoCreateSymbolicLink, IoDeleteDevice, IoDeleteSymbolicLink, IofCompleteRequest,
@@ -28,7 +30,7 @@ use crate::error::RuntimeError;
 use crate::wrappers::bindings::IoGetCurrentIrpStackLocation;
 use crate::wrappers::strings::UnicodeString;
 
-#[cfg(not(test))]
+// #[cfg(not(test))]
 #[global_allocator]
 static GLOBAL_ALLOCATOR: WdkAllocator = WdkAllocator;
 
