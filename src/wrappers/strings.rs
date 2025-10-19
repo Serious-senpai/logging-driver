@@ -73,11 +73,12 @@ impl TryFrom<&AnsiString> for UnicodeString {
             Buffer: buffer.as_mut_ptr(),
         };
 
-        let ptr = &mut *value.native();
-
-        // `RtlAnsiStringToUnicodeString` allocates and copies the string (it must perform a deep copy to convert to UTF-16)
+        // `RtlAnsiStringToUnicodeString` converts the string to UTF-16 (a deep copy but no allocation is performed)
         // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlansistringtounicodestring
-        let status = unsafe { RtlAnsiStringToUnicodeString(&mut native, ptr, 0) };
+        let status = unsafe {
+            let value = value.borrow_native() as *const STRING as *mut STRING;
+            RtlAnsiStringToUnicodeString(&mut native, value, 0)
+        };
 
         if !NT_SUCCESS(status) {
             return Err(RuntimeError::Failure(status));
