@@ -15,9 +15,7 @@ use core::ptr::null_mut;
 
 // #[cfg(not(test))]
 use wdk_alloc::WdkAllocator;
-use wdk_sys::ntddk::{
-    IoCreateDevice, IoCreateSymbolicLink, IoDeleteDevice, IoDeleteSymbolicLink, IofCompleteRequest,
-};
+use wdk_sys::ntddk::{IoCreateDevice, IoDeleteDevice, IofCompleteRequest};
 use wdk_sys::{
     DRIVER_OBJECT, FILE_DEVICE_SECURE_OPEN, FILE_DEVICE_UNKNOWN, IO_NO_INCREMENT, IRP_MJ_READ,
     IRP_MJ_WRITE, NT_SUCCESS, NTSTATUS, PCUNICODE_STRING, PDEVICE_OBJECT, PDRIVER_DISPATCH,
@@ -28,6 +26,7 @@ use wdk_sys::{
 use crate::displayer::ForeignDisplayer;
 use crate::error::RuntimeError;
 use crate::wrappers::bindings::IoGetCurrentIrpStackLocation;
+use crate::wrappers::safety::{create_symbolic_link, delete_symbolic_link};
 use crate::wrappers::strings::UnicodeString;
 
 // #[cfg(not(test))]
@@ -37,12 +36,16 @@ static GLOBAL_ALLOCATOR: WdkAllocator = WdkAllocator;
 const DOS_NAME: &CStr = c"\\DosDevices\\LogDrvDev";
 const DEVICE_NAME: &CStr = c"\\Device\\LogDrvDev";
 
-fn _delete_device(driver: &DRIVER_OBJECT) -> Result<(), RuntimeError> {
-    let dos_name = UnicodeString::try_from(DOS_NAME)?;
-
-    let status = unsafe { IoDeleteSymbolicLink(&mut dos_name.native().into_inner()) };
-    if !NT_SUCCESS(status) {
-        log!("Failed to remove symlink: {status}");
+fn _delete_device(driver: &DRIVER_OBJECT) {
+    match DOS_NAME.try_into() {
+        Ok(dos_name) => {
+            if let Err(e) = delete_symbolic_link(&dos_name) {
+                log!("Failed to remove symlink: {e}");
+            }
+        }
+        Err(e) => {
+            log!("Cannot convert {DOS_NAME:?} to UnicodeString: {e}");
+        }
     }
 
     let device = driver.DeviceObject;
@@ -51,8 +54,6 @@ fn _delete_device(driver: &DRIVER_OBJECT) -> Result<(), RuntimeError> {
             IoDeleteDevice(device);
         }
     }
-
-    Ok(())
 }
 
 fn _set_driver_callback(driver: &mut DRIVER_OBJECT, irp_code: u32, callback: PDRIVER_DISPATCH) {
@@ -78,15 +79,15 @@ fn _driver_entry(
         ForeignDisplayer::Unicode(&driver.DriverName),
     );
 
-    let dos_name = UnicodeString::try_from(DOS_NAME)?;
     let device_name = UnicodeString::try_from(DEVICE_NAME)?;
 
     let mut device = null_mut();
     let status = unsafe {
+        let mut device_name = device_name.native().into_inner();
         IoCreateDevice(
             driver,
             0,
-            &mut device_name.native().into_inner(),
+            &mut device_name,
             FILE_DEVICE_UNKNOWN,
             FILE_DEVICE_SECURE_OPEN,
             0,
@@ -98,17 +99,11 @@ fn _driver_entry(
         return Err(RuntimeError::Failure(status));
     }
 
-    let status = unsafe {
-        IoCreateSymbolicLink(
-            &mut dos_name.native().into_inner(),
-            &mut device_name.native().into_inner(),
-        )
-    };
-    if !NT_SUCCESS(status) {
+    create_symbolic_link(&DOS_NAME.try_into()?, &DEVICE_NAME.try_into()?).map_err(|e| {
         log!("Failed to create symbolic link: {status}");
-        _delete_device(driver)?;
-        return Err(RuntimeError::Failure(status));
-    }
+        _delete_device(driver);
+        e
+    })?;
 
     Ok(())
 }
@@ -118,7 +113,7 @@ fn _driver_unload(driver: &mut DRIVER_OBJECT) -> Result<(), RuntimeError> {
         "driver_unload {:?}",
         ForeignDisplayer::Unicode(&driver.DriverName),
     );
-    _delete_device(driver)?;
+    _delete_device(driver);
     Ok(())
 }
 
