@@ -99,10 +99,9 @@ fn _driver_entry(
         return Err(RuntimeError::Failure(status));
     }
 
-    create_symbolic_link(&DOS_NAME.try_into()?, &DEVICE_NAME.try_into()?).map_err(|e| {
-        log!("Failed to create symbolic link: {status}");
+    create_symbolic_link(&DOS_NAME.try_into()?, &DEVICE_NAME.try_into()?).inspect_err(|e| {
+        log!("Failed to create symbolic link: {e}");
         _delete_device(driver);
-        e
     })?;
 
     Ok(())
