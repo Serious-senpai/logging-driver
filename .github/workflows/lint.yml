@@ -61,7 +61,7 @@ jobs:
         shell: cmd
         working-directory: kernel
         run: |
-          set LIBCLANG_PATH=%cd%\extern\clang-llvm-21.1.3
+          set LIBCLANG_PATH=%cd%\..\extern\clang-llvm-21.1.3
           cargo clippy --all-features --no-deps -- -D warnings
 
       - name: Run clippy (user)
