@@ -115,10 +115,10 @@ mod _handler {
 
     use wdk_sys::ntddk::{IoCreateDevice, IoDeleteDevice, IofCompleteRequest};
     use wdk_sys::{
-        DEVICE_OBJECT, DO_BUFFERED_IO, DRIVER_OBJECT, FILE_DEVICE_SECURE_OPEN, FILE_DEVICE_UNKNOWN,
-        IO_NO_INCREMENT, IRP, IRP_MJ_CLEANUP, IRP_MJ_CLOSE, IRP_MJ_CREATE, IRP_MJ_READ,
-        IRP_MJ_WRITE, NT_SUCCESS, STATUS_INVALID_DEVICE_REQUEST, STATUS_INVALID_PARAMETER,
-        STATUS_SUCCESS,
+        DEVICE_OBJECT, DO_BUFFERED_IO, DO_DEVICE_INITIALIZING, DRIVER_OBJECT,
+        FILE_DEVICE_SECURE_OPEN, FILE_DEVICE_UNKNOWN, IO_NO_INCREMENT, IRP, IRP_MJ_CLEANUP,
+        IRP_MJ_CLOSE, IRP_MJ_CREATE, IRP_MJ_READ, IRP_MJ_WRITE, NT_SUCCESS,
+        STATUS_INVALID_DEVICE_REQUEST, STATUS_INVALID_PARAMETER, STATUS_SUCCESS,
     };
 
     use crate::displayer::ForeignDisplayer;
@@ -194,6 +194,8 @@ mod _handler {
 
         if let Some(device) = unsafe { device.as_mut() } {
             device.Flags |= DO_BUFFERED_IO;
+            device.Flags &= !DO_DEVICE_INITIALIZING;
+
             unsafe {
                 write(
                     device.DeviceExtension as *mut DeviceExtension,
@@ -227,9 +229,7 @@ mod _handler {
             Some(stack) => {
                 log!("Received IRP {}", stack.MajorFunction);
                 match stack.MajorFunction.into() {
-                    IRP_MJ_CREATE => STATUS_SUCCESS,
-                    IRP_MJ_CLOSE => STATUS_SUCCESS,
-                    IRP_MJ_CLEANUP => STATUS_SUCCESS,
+                    IRP_MJ_CREATE | IRP_MJ_CLOSE | IRP_MJ_CLEANUP => STATUS_SUCCESS,
                     IRP_MJ_READ => {
                         let queue = unsafe {
                             let extension = device.DeviceExtension as *mut DeviceExtension;
