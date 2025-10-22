@@ -124,9 +124,9 @@ pub struct AnsiString {
 }
 
 impl AnsiString {
-    pub fn native(&self) -> Lifetime<'_, STRING> {
-        Lifetime::new(*self.borrow_native())
-    }
+    // pub fn native(&self) -> Lifetime<'_, STRING> {
+    //     Lifetime::new(*self.borrow_native())
+    // }
 }
 
 impl From<&CStr> for AnsiString {

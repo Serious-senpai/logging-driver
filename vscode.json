@@ -4,7 +4,8 @@
     "extensions.ignoreRecommendations": false,
     "git.autorefresh": true,
     "rust-analyzer.linkedProjects": [
-        "${workspaceFolder}/Cargo.toml"
+        "${workspaceFolder}/kernel/Cargo.toml",
+        "${workspaceFolder}/user/Cargo.toml"
     ],
     "rust-analyzer.rustfmt.extraArgs": [
         "+nightly"

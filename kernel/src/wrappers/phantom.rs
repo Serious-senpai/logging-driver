@@ -1,8 +1,5 @@
-use core::marker::{PhantomData, PhantomPinned};
+use core::marker::PhantomData;
 use core::ops::{Deref, DerefMut};
-use core::pin::Pin;
-
-use alloc::boxed::Box;
 
 pub struct Lifetime<'a, T> {
     _value: T,
@@ -38,33 +35,33 @@ impl<T> DerefMut for Lifetime<'_, T> {
     }
 }
 
-pub struct Pinned<T>
-where
-    T: Unpin,
-{
-    _value: T,
-    _marker: PhantomPinned,
-}
+// pub struct Pinned<T>
+// where
+//     T: Unpin,
+// {
+//     _value: T,
+//     _marker: PhantomPinned,
+// }
 
-impl<T> Pinned<T>
-where
-    T: Unpin,
-{
-    pub fn new(value: T) -> Pin<Box<Self>> {
-        Box::pin(Self {
-            _value: value,
-            _marker: PhantomPinned,
-        })
-    }
-}
+// impl<T> Pinned<T>
+// where
+//     T: Unpin,
+// {
+//     pub fn new(value: T) -> Pin<Box<Self>> {
+//         Box::pin(Self {
+//             _value: value,
+//             _marker: PhantomPinned,
+//         })
+//     }
+// }
 
-impl<T> Deref for Pinned<T>
-where
-    T: Unpin,
-{
-    type Target = T;
+// impl<T> Deref for Pinned<T>
+// where
+//     T: Unpin,
+// {
+//     type Target = T;
 
-    fn deref(&self) -> &Self::Target {
-        &self._value
-    }
-}
+//     fn deref(&self) -> &Self::Target {
+//         &self._value
+//     }
+// }

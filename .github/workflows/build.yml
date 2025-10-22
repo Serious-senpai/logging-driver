@@ -24,14 +24,21 @@ jobs:
       - name: Setup repository
         shell: cmd
         run: |
-          extern\wdksetup.exe /features + /log "%cd%\target\wdksetup.log" /quiet
+          extern\wdksetup.exe /features + /log "%cd%\wdksetup.log" /quiet
           cargo install --locked cargo-make --no-default-features --features tls-native
 
       - name: Build kernel driver
         shell: cmd
+        working-directory: kernel
         run: |
           set LIBCLANG_PATH=%cd%\extern\clang-llvm-21.1.3
           cargo make default --release
+
+      - name: Build user application
+        shell: cmd
+        working-directory: user
+        run: |
+          cargo build --release
 
       - name: Upload build artifacts
         if: ${{ always() }}
@@ -39,5 +46,6 @@ jobs:
         with:
           name: build
           path: |
-            target/wdksetup.log
-            target/release/logging_driver_package
+            wdksetup.log
+            kernel/target/release/logging_driver_package
+            user/target/release/user.exe
