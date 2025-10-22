@@ -24,11 +24,17 @@ jobs:
       - name: Setup repository
         run: cargo install --locked cargo-make --no-default-features --features tls-native
 
-      - name: Run rustfmt via cargo fmt
+      - name: Run rustfmt via cargo fmt (kernel)
         shell: cmd
+        working-directory: kernel
         run: |
-          set LIBCLANG_PATH=%cd%\extern\clang-llvm-21.1.3
+          set LIBCLANG_PATH=%cd%\..\extern\clang-llvm-21.1.3
           cargo +nightly fmt -- --check
+
+      - name: Run rustfmt via cargo fmt (user)
+        shell: cmd
+        working-directory: user
+        run: cargo +nightly fmt -- --check
 
   clippy:
     name: Run clippy
@@ -51,8 +57,14 @@ jobs:
           extern\wdksetup.exe /features + /q
           cargo install --locked cargo-make --no-default-features --features tls-native
 
-      - name: Run clippy
+      - name: Run clippy (kernel)
         shell: cmd
+        working-directory: kernel
         run: |
           set LIBCLANG_PATH=%cd%\extern\clang-llvm-21.1.3
           cargo clippy --all-features --no-deps -- -D warnings
+
+      - name: Run clippy (user)
+        shell: cmd
+        working-directory: user
+        run: cargo clippy --all-features --no-deps -- -D warnings
