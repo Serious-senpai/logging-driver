@@ -1,5 +1,5 @@
-use wdk_sys::ntddk::{IoCreateSymbolicLink, IoDeleteSymbolicLink};
-use wdk_sys::{NT_SUCCESS, PASSIVE_LEVEL};
+use wdk_sys::ntddk::{IoCreateSymbolicLink, IoDeleteSymbolicLink, PsSetCreateProcessNotifyRoutine};
+use wdk_sys::{BOOLEAN, HANDLE, NT_SUCCESS, PASSIVE_LEVEL};
 
 use crate::error::RuntimeError;
 use crate::wrappers::irql::irql_requires;
@@ -39,4 +39,29 @@ pub fn create_symbolic_link(
     }
 
     Ok(())
+}
+
+fn _set_create_process_notify<const REMOVE: u8>(
+    handler: unsafe extern "C" fn(HANDLE, HANDLE, BOOLEAN),
+) -> Result<(), RuntimeError> {
+    irql_requires(PASSIVE_LEVEL)?;
+
+    let status = unsafe { PsSetCreateProcessNotifyRoutine(Some(handler), REMOVE) };
+    if !NT_SUCCESS(status) {
+        return Err(RuntimeError::Failure(status));
+    }
+
+    Ok(())
+}
+
+pub fn add_create_process_notify(
+    handler: unsafe extern "C" fn(HANDLE, HANDLE, BOOLEAN),
+) -> Result<(), RuntimeError> {
+    _set_create_process_notify::<0>(handler)
+}
+
+pub fn remove_create_process_notify(
+    handler: unsafe extern "C" fn(HANDLE, HANDLE, BOOLEAN),
+) -> Result<(), RuntimeError> {
+    _set_create_process_notify::<1>(handler)
 }

@@ -1,9 +1,12 @@
 [package]
 name = "user"
-version = "0.1.0"
-authors = ["Serious-senpai"]
-edition = "2024"
-description = "A super simple WDM driver"
+description = "User-mode application"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
 
 [dependencies]
 clap = { version = "4.5.49", features = ["cargo", "derive"] }
+
+[lints]
+workspace = true

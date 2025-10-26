@@ -1,9 +1,9 @@
 [package]
 name = "logging-driver"
-version = "0.1.0"
-authors = ["Serious-senpai"]
-edition = "2024"
 description = "A super simple WDM driver"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
 
 [package.metadata.wdk.driver-model]
 driver-type = "WDM"
@@ -12,7 +12,9 @@ driver-type = "WDM"
 crate-type = ["cdylib"]
 
 [dependencies]
+common = { path = "../common" }
 ouroboros = "0.18.5"
+serde_json = { workspace = true }
 wdk = "0.3.1"
 wdk-alloc = "0.3.1"
 wdk-panic = "0.3.1"
@@ -21,44 +23,5 @@ wdk-sys = "0.4.0"
 [build-dependencies]
 wdk-build = "0.4.0"
 
-[profile.dev]
-panic = "abort"
-lto = "thin"
-
-[profile.release]
-codegen-units = 1
-debug = 0
-lto = "thin"
-opt-level = 3
-overflow-checks = false
-panic = "abort"
-strip = true
-
-[lints.clippy]
-absolute_paths = "warn"
-assigning_clones = "warn"
-bool_to_int_with_if = "warn"
-branches_sharing_code = "warn"
-cast_lossless = "warn"
-cloned_instead_of_copied = "warn"
-collection_is_never_read = "warn"
-elidable_lifetime_names = "warn"
-empty_enum_variants_with_brackets = "warn"
-empty_structs_with_brackets = "warn"
-if_not_else = "warn"
-implicit_clone = "warn"
-inconsistent_struct_constructor = "warn"
-inefficient_to_string = "warn"
-manual_instant_elapsed = "warn"
-manual_string_new = "warn"
-map_unwrap_or = "warn"
-match_bool = "warn"
-match_same_arms = "warn"
-needless_collect = "warn"
-needless_continue = "warn"
-string_to_string = "warn"
-suboptimal_flops = "warn"
-too_many_arguments = "allow"
-trait_duplication_in_bounds = "warn"
-use_self = "warn"
-wildcard_imports = "warn"
+[lints]
+workspace = true

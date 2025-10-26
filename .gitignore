@@ -1,3 +1,4 @@
-.vscode/
+/.vscode/
+/target/
 
-run.bat
+/run.bat

@@ -1,0 +1,13 @@
+[package]
+name = "common"
+description = "Shared library between kernel and user mode"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde = { version = "1.0.228", default-features = false, features = ["alloc", "derive"] }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
