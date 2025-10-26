@@ -17,23 +17,11 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly,1.90
-          components: clippy,rustfmt
+          components: rustfmt
           cache: false
           rustflags: ""
 
-      - name: Setup repository
-        run: cargo install --locked cargo-make --no-default-features --features tls-native
-
-      - name: Run rustfmt via cargo fmt (kernel)
-        shell: cmd
-        working-directory: kernel
-        run: |
-          set LIBCLANG_PATH=%cd%\..\extern\clang-llvm-21.1.3
-          cargo +nightly fmt -- --check
-
-      - name: Run rustfmt via cargo fmt (user)
-        shell: cmd
-        working-directory: user
+      - name: Run rustfmt
         run: cargo +nightly fmt -- --check
 
   clippy:
@@ -48,7 +36,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly,1.90
-          components: clippy,rustfmt
+          components: clippy
           cache: false
           rustflags: ""
 
@@ -57,14 +45,8 @@ jobs:
           extern\wdksetup.exe /features + /q
           cargo install --locked cargo-make --no-default-features --features tls-native
 
-      - name: Run clippy (kernel)
+      - name: Run clippy
         shell: cmd
-        working-directory: kernel
         run: |
-          set LIBCLANG_PATH=%cd%\..\extern\clang-llvm-21.1.3
+          set LIBCLANG_PATH=%cd%\extern\clang-llvm-21.1.3
           cargo clippy --all-features --no-deps -- -D warnings
-
-      - name: Run clippy (user)
-        shell: cmd
-        working-directory: user
-        run: cargo clippy --all-features --no-deps -- -D warnings
