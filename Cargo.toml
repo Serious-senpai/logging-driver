@@ -8,7 +8,7 @@ authors = ["Serious-senpai"]
 edition = "2024"
 
 [workspace.dependencies]
-serde_json = { version = "1.0.145", default-features = false, features = ["alloc"] }
+postcard = { version = "1.1.3", features = ["alloc"] }
 
 [workspace.lints.clippy]
 absolute_paths = "warn"

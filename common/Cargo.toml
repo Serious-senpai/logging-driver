@@ -6,8 +6,8 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
+postcard = { workspace = true }
 serde = { version = "1.0.228", default-features = false, features = ["alloc", "derive"] }
-serde_json = { workspace = true }
 
 [lints]
 workspace = true

@@ -15,8 +15,8 @@ extern crate wdk_panic;
 // #[cfg(not(test))]
 use wdk_alloc::WdkAllocator;
 use wdk_sys::{
-    BOOLEAN, HANDLE, NTSTATUS, PCUNICODE_STRING, PDEVICE_OBJECT, PDRIVER_OBJECT, PIRP,
-    STATUS_INVALID_PARAMETER, STATUS_SUCCESS, STATUS_UNSUCCESSFUL,
+    NTSTATUS, PCUNICODE_STRING, PDEVICE_OBJECT, PDRIVER_OBJECT, PIRP, STATUS_INVALID_PARAMETER,
+    STATUS_SUCCESS, STATUS_UNSUCCESSFUL,
 };
 
 use crate::error::RuntimeError;
@@ -37,7 +37,7 @@ unsafe extern "C" fn driver_unload(driver: PDRIVER_OBJECT) {
         }
     };
 
-    if let Err(e) = handlers::driver_unload(driver, process_notify) {
+    if let Err(e) = handlers::driver_unload(driver) {
         log!("Error when unloading driver: {e}");
     }
 }
@@ -96,13 +96,7 @@ pub unsafe extern "C" fn driver_entry(
         }
     };
 
-    match handlers::driver_entry(
-        driver,
-        registry_path,
-        driver_unload,
-        irp_handler,
-        process_notify,
-    ) {
+    match handlers::driver_entry(driver, registry_path, driver_unload, irp_handler) {
         Ok(()) => STATUS_SUCCESS,
         Err(e) => {
             log!("Error when loading driver: {e}");
@@ -112,10 +106,4 @@ pub unsafe extern "C" fn driver_entry(
             }
         }
     }
-}
-
-/// # Safety
-/// Must be called by the OS.
-unsafe extern "C" fn process_notify(parent_id: HANDLE, process_id: HANDLE, create: BOOLEAN) {
-    handlers::process_notify(parent_id, process_id, create);
 }

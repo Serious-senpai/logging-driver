@@ -14,7 +14,7 @@ crate-type = ["cdylib"]
 [dependencies]
 common = { path = "../common" }
 ouroboros = "0.18.5"
-serde_json = { workspace = true }
+postcard = { workspace = true }
 wdk = "0.3.1"
 wdk-alloc = "0.3.1"
 wdk-panic = "0.3.1"

@@ -1,5 +1,6 @@
+use core::error::Error;
 use core::fmt;
-use core::{error::Error, num::TryFromIntError};
+use core::num::TryFromIntError;
 
 use wdk_sys::{KIRQL, NTSTATUS};
 

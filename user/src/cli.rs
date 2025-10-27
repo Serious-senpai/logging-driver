@@ -15,15 +15,6 @@ pub struct Arguments {
 #[derive(Debug, Subcommand)]
 #[clap(rename_all = "kebab_case")]
 pub enum Action {
-    /// Perform a read operation to the driver device
-    Read {
-        // Number of bytes to read
-        size: usize,
-    },
-
-    /// Perform a write operation to the driver device
-    Write {
-        // UTF-8 data to write
-        data: String,
-    },
+    /// Continuously poll data from the driver device
+    Poll,
 }

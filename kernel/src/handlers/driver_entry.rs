@@ -4,16 +4,21 @@ use core::sync::atomic::Ordering;
 
 use wdk_sys::ntddk::IoCreateDevice;
 use wdk_sys::{
-    BOOLEAN, DEVICE_OBJECT, DO_BUFFERED_IO, DO_DEVICE_INITIALIZING, DRIVER_OBJECT,
-    FILE_DEVICE_SECURE_OPEN, FILE_DEVICE_UNKNOWN, HANDLE, IRP, NT_SUCCESS,
+    DEVICE_OBJECT, DO_BUFFERED_IO, DO_DEVICE_INITIALIZING, DRIVER_OBJECT, FILE_DEVICE_SECURE_OPEN,
+    FILE_DEVICE_UNKNOWN, IRP, NT_SUCCESS,
 };
 
 use crate::config::{DEVICE_NAME, DOS_NAME, DRIVER, QUEUE_CAPACITY};
 use crate::displayer::ForeignDisplayer;
 use crate::error::RuntimeError;
+use crate::handlers::process_notify::process_notify;
+use crate::handlers::thread_notify::thread_notify;
 use crate::handlers::{DeviceExtension, delete_device};
 use crate::log;
-use crate::wrappers::safety::{add_create_process_notify, create_symbolic_link};
+use crate::wrappers::mutex::SpinLock;
+use crate::wrappers::safety::{
+    add_create_process_notify, add_create_thread_notify, create_symbolic_link,
+};
 use crate::wrappers::strings::UnicodeString;
 
 pub fn driver_entry(
@@ -21,7 +26,6 @@ pub fn driver_entry(
     registry_path: UnicodeString,
     driver_unload: unsafe extern "C" fn(*mut DRIVER_OBJECT),
     irp_handler: unsafe extern "C" fn(*mut DEVICE_OBJECT, *mut IRP) -> i32,
-    process_notify: unsafe extern "C" fn(HANDLE, HANDLE, BOOLEAN),
 ) -> Result<(), RuntimeError> {
     driver.DriverUnload = Some(driver_unload);
     for handler in driver.MajorFunction.iter_mut() {
@@ -61,7 +65,7 @@ pub fn driver_entry(
             write(
                 device.DeviceExtension as *mut DeviceExtension,
                 DeviceExtension {
-                    buffer: VecDeque::with_capacity(QUEUE_CAPACITY),
+                    buffer: SpinLock::new(VecDeque::with_capacity(QUEUE_CAPACITY)),
                 },
             );
         }
@@ -76,6 +80,10 @@ pub fn driver_entry(
 
     add_create_process_notify(process_notify).inspect_err(|e| {
         log!("Failed to add process notify: {e}");
+    })?;
+
+    add_create_thread_notify(thread_notify).inspect_err(|e| {
+        log!("Failed to add thread notify: {e}");
     })?;
 
     Ok(())
