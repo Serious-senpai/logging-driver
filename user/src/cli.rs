@@ -17,4 +17,7 @@ pub struct Arguments {
 pub enum Action {
     /// Continuously poll data from the driver device
     Poll,
+
+    /// Continuously stream data from the driver device via shared memory
+    Stream,
 }

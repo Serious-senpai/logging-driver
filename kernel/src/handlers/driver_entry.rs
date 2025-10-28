@@ -15,6 +15,7 @@ use crate::handlers::process_notify::process_notify;
 use crate::handlers::thread_notify::thread_notify;
 use crate::handlers::{DeviceExtension, delete_device};
 use crate::log;
+use crate::state::DeviceState;
 use crate::wrappers::mutex::SpinLock;
 use crate::wrappers::safety::{
     add_create_process_notify, add_create_thread_notify, create_symbolic_link,
@@ -65,7 +66,10 @@ pub fn driver_entry(
             write(
                 device.DeviceExtension as *mut DeviceExtension,
                 DeviceExtension {
-                    buffer: SpinLock::new(VecDeque::with_capacity(QUEUE_CAPACITY)),
+                    inner: SpinLock::new(DeviceState {
+                        queue: VecDeque::with_capacity(QUEUE_CAPACITY),
+                        memmap: None,
+                    }),
                 },
             );
         }

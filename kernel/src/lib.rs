@@ -7,6 +7,7 @@ mod displayer;
 mod error;
 mod handlers;
 mod log;
+mod state;
 mod wrappers;
 
 // #[cfg(not(test))]

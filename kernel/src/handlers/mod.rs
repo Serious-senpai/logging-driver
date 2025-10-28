@@ -4,7 +4,6 @@ mod irp_handler;
 mod process_notify;
 mod thread_notify;
 
-use alloc::collections::vec_deque::VecDeque;
 use core::ptr::drop_in_place;
 
 pub use driver_entry::driver_entry;
@@ -15,13 +14,8 @@ use wdk_sys::ntddk::IoDeleteDevice;
 
 use crate::config::DOS_NAME;
 use crate::log;
-use crate::wrappers::mutex::SpinLock;
+use crate::state::DeviceExtension;
 use crate::wrappers::safety::delete_symbolic_link;
-
-#[repr(C)]
-pub struct DeviceExtension {
-    pub buffer: SpinLock<VecDeque<u8>>,
-}
 
 fn delete_device(driver: &DRIVER_OBJECT) {
     match DOS_NAME.try_into() {
