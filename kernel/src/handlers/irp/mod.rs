@@ -1,9 +1,15 @@
+mod cleanup;
+mod close;
+mod create;
 mod ioctl;
 mod read;
 
 use wdk_sys::{DEVICE_OBJECT, IO_STACK_LOCATION, IRP, STATUS_INVALID_DEVICE_REQUEST};
 
 use crate::error::RuntimeError;
+use crate::handlers::irp::cleanup::CleanupHandler;
+use crate::handlers::irp::close::CloseHandler;
+use crate::handlers::irp::create::CreateHandler;
 use crate::handlers::irp::ioctl::DeviceControlHandler;
 use crate::handlers::irp::read::ReadHandler;
 use crate::state::DeviceExtension;
@@ -55,7 +61,10 @@ pub fn irp_handler(
         extension,
         irp,
         irpsp,
-        ReadHandler,
+        CleanupHandler,
+        CloseHandler,
+        CreateHandler,
         DeviceControlHandler,
+        ReadHandler,
     )
 }
