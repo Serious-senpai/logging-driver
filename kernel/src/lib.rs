@@ -15,12 +15,14 @@ extern crate wdk_panic;
 
 // #[cfg(not(test))]
 use wdk_alloc::WdkAllocator;
+use wdk_sys::ntddk::IofCompleteRequest;
 use wdk_sys::{
-    NTSTATUS, PCUNICODE_STRING, PDEVICE_OBJECT, PDRIVER_OBJECT, PIRP, STATUS_INVALID_PARAMETER,
-    STATUS_SUCCESS, STATUS_UNSUCCESSFUL,
+    IO_NO_INCREMENT, NTSTATUS, PCUNICODE_STRING, PDEVICE_OBJECT, PDRIVER_OBJECT, PIRP,
+    STATUS_INVALID_PARAMETER, STATUS_SUCCESS, STATUS_UNSUCCESSFUL,
 };
 
 use crate::error::RuntimeError;
+use crate::state::DeviceExtension;
 use crate::wrappers::bindings::IoGetCurrentIrpStackLocation;
 use crate::wrappers::strings::UnicodeString;
 
@@ -45,12 +47,24 @@ unsafe extern "C" fn driver_unload(driver: PDRIVER_OBJECT) {
 }
 
 /// # Safety
-/// Must be called by the OS.
+/// Must be called by the OS. Because IRP handlers may be run concurrently, we provide
+/// shared state (e.g. [`DeviceExtension`]) as immutable references.
 unsafe extern "C" fn irp_handler(device: PDEVICE_OBJECT, irp: PIRP) -> NTSTATUS {
-    let device = match unsafe { device.as_mut() } {
+    let device = match unsafe { device.as_ref() } {
         Some(d) => d,
         None => {
             log!("irp_handler: PDEVICE_OBJECT is null");
+            return STATUS_INVALID_PARAMETER;
+        }
+    };
+
+    let extension = match unsafe {
+        let ptr = device.DeviceExtension as *mut DeviceExtension;
+        ptr.as_ref()
+    } {
+        Some(ext) => ext,
+        None => {
+            log!("irp_handler: DeviceExtension is null");
             return STATUS_INVALID_PARAMETER;
         }
     };
@@ -63,7 +77,7 @@ unsafe extern "C" fn irp_handler(device: PDEVICE_OBJECT, irp: PIRP) -> NTSTATUS 
         }
     };
 
-    let irpsp = match unsafe { IoGetCurrentIrpStackLocation(irp).as_ref() } {
+    let irpsp = match unsafe { IoGetCurrentIrpStackLocation(irp).as_mut() } {
         Some(s) => s,
         None => {
             log!("irp_handler: Failed to call IoGetCurrentIrpStackLocation");
@@ -71,7 +85,8 @@ unsafe extern "C" fn irp_handler(device: PDEVICE_OBJECT, irp: PIRP) -> NTSTATUS 
         }
     };
 
-    match handlers::irp_handler(device, irp, irpsp) {
+    log!("Received IRP {}", irpsp.MajorFunction);
+    let status = match handlers::irp_handler(device, extension, irp, irpsp) {
         Ok(()) => STATUS_SUCCESS,
         Err(e) => {
             log!("Error when handling IRP: {e}");
@@ -80,7 +95,15 @@ unsafe extern "C" fn irp_handler(device: PDEVICE_OBJECT, irp: PIRP) -> NTSTATUS 
                 _ => STATUS_UNSUCCESSFUL,
             }
         }
+    };
+
+    irp.IoStatus.Information = 0;
+    irp.IoStatus.__bindgen_anon_1.Status = status;
+    unsafe {
+        IofCompleteRequest(irp, IO_NO_INCREMENT as _);
     }
+
+    status
 }
 
 /// # Safety

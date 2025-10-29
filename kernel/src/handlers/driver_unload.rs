@@ -17,16 +17,17 @@ pub fn driver_unload(driver: &mut DRIVER_OBJECT) -> Result<(), RuntimeError> {
         "driver_unload {:?}",
         ForeignDisplayer::Unicode(&driver.DriverName),
     );
-    delete_device(driver);
-    DRIVER.store(null_mut(), Ordering::SeqCst);
+
+    remove_create_thread_notify(thread_notify).inspect_err(|e| {
+        log!("Failed to remove thread notify: {e}");
+    })?;
 
     remove_create_process_notify(process_notify).inspect_err(|e| {
         log!("Failed to remove process notify: {e}");
     })?;
 
-    remove_create_thread_notify(thread_notify).inspect_err(|e| {
-        log!("Failed to remove thread notify: {e}");
-    })?;
+    delete_device(driver);
+    DRIVER.store(null_mut(), Ordering::SeqCst);
 
     Ok(())
 }

@@ -1,31 +1,41 @@
 use common::ioctl::IOCTL_MEMORY_CLEANUP;
-use wdk_sys::{NTSTATUS, STATUS_DEVICE_BUSY, STATUS_SUCCESS};
+use wdk_sys::{DEVICE_OBJECT, IO_STACK_LOCATION, IRP};
 
+use crate::error::RuntimeError;
 use crate::handlers::DeviceExtension;
 use crate::handlers::irp::ioctl::IoctlHandler;
 
-pub struct MemoryCleanupHandler;
+pub struct MemoryCleanupHandler<'a> {
+    _device: &'a DEVICE_OBJECT,
+    _extension: &'a DeviceExtension,
+    _irp: &'a mut IRP,
+    _irpsp: &'a mut IO_STACK_LOCATION,
+}
 
-impl IoctlHandler for MemoryCleanupHandler {
+impl<'a> IoctlHandler<'a> for MemoryCleanupHandler<'a> {
     const CODE: u32 = IOCTL_MEMORY_CLEANUP;
 
-    unsafe fn handle(
-        device: &mut wdk_sys::DEVICE_OBJECT,
-        _: &mut wdk_sys::IRP,
-        _: &wdk_sys::IO_STACK_LOCATION,
-        _: u32,
-    ) -> NTSTATUS {
-        let extension = device.DeviceExtension as *mut DeviceExtension;
-        match unsafe { extension.as_mut() } {
-            Some(extension_ref) => {
-                let old = {
-                    let mut inner = extension_ref.inner.acquire();
-                    inner.memmap.take()
-                };
-                drop(old);
-                STATUS_SUCCESS
-            }
-            None => STATUS_DEVICE_BUSY,
-        }
+    fn new(
+        device: &'a DEVICE_OBJECT,
+        extension: &'a DeviceExtension,
+        irp: &'a mut IRP,
+        irpsp: &'a mut IO_STACK_LOCATION,
+    ) -> Result<Self, RuntimeError> {
+        Ok(Self {
+            _device: device,
+            _extension: extension,
+            _irp: irp,
+            _irpsp: irpsp,
+        })
+    }
+
+    fn handle(&mut self) -> Result<(), RuntimeError> {
+        let old = {
+            let mut inner = self._extension.inner.acquire();
+            inner.memmap.take()
+        };
+
+        drop(old);
+        Ok(())
     }
 }
