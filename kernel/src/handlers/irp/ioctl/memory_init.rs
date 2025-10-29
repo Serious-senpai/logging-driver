@@ -18,7 +18,7 @@ pub struct MemoryInitializeHandler;
 impl IoctlHandler for MemoryInitializeHandler {
     const CODE: u32 = IOCTL_MEMORY_INITIALIZE;
 
-    fn handle(
+    unsafe fn handle(
         device: &mut wdk_sys::DEVICE_OBJECT,
         irp: &mut wdk_sys::IRP,
         _: &wdk_sys::IO_STACK_LOCATION,

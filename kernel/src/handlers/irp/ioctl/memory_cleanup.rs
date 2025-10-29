@@ -9,7 +9,7 @@ pub struct MemoryCleanupHandler;
 impl IoctlHandler for MemoryCleanupHandler {
     const CODE: u32 = IOCTL_MEMORY_CLEANUP;
 
-    fn handle(
+    unsafe fn handle(
         device: &mut wdk_sys::DEVICE_OBJECT,
         _: &mut wdk_sys::IRP,
         _: &wdk_sys::IO_STACK_LOCATION,

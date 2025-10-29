@@ -21,6 +21,7 @@ use wdk_sys::{
 };
 
 use crate::error::RuntimeError;
+use crate::wrappers::bindings::IoGetCurrentIrpStackLocation;
 use crate::wrappers::strings::UnicodeString;
 
 // #[cfg(not(test))]
@@ -62,7 +63,15 @@ unsafe extern "C" fn irp_handler(device: PDEVICE_OBJECT, irp: PIRP) -> NTSTATUS 
         }
     };
 
-    match handlers::irp_handler(device, irp) {
+    let irpsp = match unsafe { IoGetCurrentIrpStackLocation(irp).as_ref() } {
+        Some(s) => s,
+        None => {
+            log!("irp_handler: Failed to call IoGetCurrentIrpStackLocation");
+            return STATUS_INVALID_PARAMETER;
+        }
+    };
+
+    match handlers::irp_handler(device, irp, irpsp) {
         Ok(()) => STATUS_SUCCESS,
         Err(e) => {
             log!("Error when handling IRP: {e}");
