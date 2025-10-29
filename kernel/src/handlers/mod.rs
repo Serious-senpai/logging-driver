@@ -1,6 +1,6 @@
 mod driver_entry;
 mod driver_unload;
-mod irp_handler;
+mod irp;
 mod process_notify;
 mod thread_notify;
 
@@ -8,7 +8,7 @@ use core::ptr::drop_in_place;
 
 pub use driver_entry::driver_entry;
 pub use driver_unload::driver_unload;
-pub use irp_handler::irp_handler;
+pub use irp::irp_handler;
 use wdk_sys::DRIVER_OBJECT;
 use wdk_sys::ntddk::IoDeleteDevice;
 

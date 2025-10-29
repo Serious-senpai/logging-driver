@@ -8,6 +8,9 @@ use crate::error::RuntimeError;
 use crate::wrappers::irql::irql_requires;
 use crate::wrappers::strings::UnicodeString;
 
+/// Removes a symbolic link from the system.
+///
+/// See also: [`IoDeleteSymbolicLink`](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/nf-wdm-iodeletesymboliclink)
 pub fn delete_symbolic_link(name: &UnicodeString) -> Result<(), RuntimeError> {
     irql_requires(PASSIVE_LEVEL)?;
 
@@ -24,6 +27,9 @@ pub fn delete_symbolic_link(name: &UnicodeString) -> Result<(), RuntimeError> {
     Ok(())
 }
 
+/// Sets up a symbolic link between a device object name and a user-visible name for the device.
+///
+/// See also: [`IoCreateSymbolicLink`](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/nf-wdm-iocreatesymboliclink)
 pub fn create_symbolic_link(
     symbolic_link_name: &UnicodeString,
     device_name: &UnicodeString,

@@ -42,12 +42,15 @@ impl<T> DerefMut for SpinLockGuard<'_, T> {
     }
 }
 
+/// Wrapper around a Windows kernel
+/// [spin lock](https://learn.microsoft.com/en-us/windows-hardware/drivers/kernel/introduction-to-spin-locks).
 pub struct SpinLock<T> {
     _lock: KSPIN_LOCK,
     _inner: UnsafeCell<T>,
 }
 
 impl<T> SpinLock<T> {
+    /// Construct a new spin lock synchronizing access to an inner value.
     pub fn new(inner: T) -> Self {
         let mut lock = MaybeUninit::<KSPIN_LOCK>::uninit();
         unsafe {
@@ -59,6 +62,8 @@ impl<T> SpinLock<T> {
         }
     }
 
+    /// Acquire the spin lock. While the guard is held, IRQL is raised to at least
+    /// `DISPATCH_LEVEL`.
     pub fn acquire(&self) -> SpinLockGuard<'_, T> {
         let lock = &self._lock as *const KSPIN_LOCK as *mut KSPIN_LOCK;
         let irql = unsafe {
