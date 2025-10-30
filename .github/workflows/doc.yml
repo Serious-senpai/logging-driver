@@ -1,0 +1,42 @@
+name: Documentation
+
+on: [ push, pull_request ]
+
+permissions:
+  contents: read
+
+jobs:
+  doc:
+    name: Build documentation
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly,1.90
+          cache: false
+          rustflags: ""
+
+      - name: Setup repository
+        shell: cmd
+        run: |
+          extern\wdksetup.exe /features + /log "%cd%\wdksetup.log" /quiet
+          cargo install --locked cargo-make --no-default-features --features tls-native
+
+      - name: Build documentation
+        shell: cmd
+        run: cargo doc --all-features --document-private-items
+
+      - name: Upload build artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: build
+          path: |
+            wdksetup.log
+            target/release/logging_driver_package
+            target/release/user.exe

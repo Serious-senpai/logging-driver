@@ -7,7 +7,9 @@ const _FILE_ANY_ACCESS: u32 = 0;
 const _FILE_DEVICE_UNKNOWN: u32 = 34;
 const _METHOD_BUFFERED: u32 = 0;
 
-/// See https://learn.microsoft.com/en-us/windows-hardware/drivers/kernel/defining-i-o-control-codes
+/// Port of the [`CTL_CODE`](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d4drvif/nf-d4drvif-ctl_code) macro.
+///
+/// See also: <https://learn.microsoft.com/en-us/windows-hardware/drivers/kernel/defining-i-o-control-codes>
 const fn _ctl_code(device_type: u32, function: u32, method: u32, access: u32) -> u32 {
     (device_type << 16) | (access << 14) | (function << 2) | method
 }
