@@ -1,4 +1,5 @@
 use alloc::collections::VecDeque;
+use core::mem::size_of;
 use core::ptr::{null_mut, write};
 use core::sync::atomic::Ordering;
 
@@ -11,11 +12,11 @@ use wdk_sys::{
 use crate::config::{DEVICE_NAME, DOS_NAME, DRIVER, QUEUE_CAPACITY};
 use crate::displayer::ForeignDisplayer;
 use crate::error::RuntimeError;
+use crate::handlers::delete_device;
 use crate::handlers::process_notify::process_notify;
 use crate::handlers::thread_notify::thread_notify;
-use crate::handlers::{DeviceExtension, delete_device};
 use crate::log;
-use crate::state::DeviceState;
+use crate::state::{DeviceExtension, DeviceState};
 use crate::wrappers::mutex::SpinLock;
 use crate::wrappers::safety::{
     add_create_process_notify, add_create_thread_notify, create_symbolic_link,

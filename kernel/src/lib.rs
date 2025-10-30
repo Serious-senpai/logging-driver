@@ -86,6 +86,7 @@ unsafe extern "C" fn irp_handler(device: PDEVICE_OBJECT, irp: PIRP) -> NTSTATUS 
     };
 
     log!("Received IRP {}", irpsp.MajorFunction);
+
     let status = match handlers::irp_handler(device, extension, irp, irpsp) {
         Ok(()) => STATUS_SUCCESS,
         Err(e) => {
@@ -97,7 +98,6 @@ unsafe extern "C" fn irp_handler(device: PDEVICE_OBJECT, irp: PIRP) -> NTSTATUS 
         }
     };
 
-    irp.IoStatus.Information = 0;
     irp.IoStatus.__bindgen_anon_1.Status = status;
     unsafe {
         IofCompleteRequest(irp, IO_NO_INCREMENT as _);

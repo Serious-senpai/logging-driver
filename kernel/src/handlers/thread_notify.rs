@@ -5,8 +5,8 @@ use wdk_sys::ntddk::KeSetEvent;
 use wdk_sys::{BOOLEAN, HANDLE};
 
 use crate::config::{DRIVER, QUEUE_CAPACITY};
-use crate::handlers::DeviceExtension;
 use crate::log;
+use crate::state::DeviceExtension;
 
 /// # Safety
 /// Must be called by the OS.

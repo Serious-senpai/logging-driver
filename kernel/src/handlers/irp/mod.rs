@@ -14,9 +14,18 @@ use crate::handlers::irp::ioctl::DeviceControlHandler;
 use crate::handlers::irp::read::ReadHandler;
 use crate::state::DeviceExtension;
 
+/// Trait for handling IRP requests.
+///
+/// Each time an IRP request is received, an instance of a type implementing this trait
+/// will be created to handle the request.
 pub trait IrpHandler<'a> {
+    /// The IRP major function code this handler is responsible for.
     const CODE: u32;
 
+    /// Create a new instance of the handler.
+    ///
+    /// Implementations should use this method to populate necessary fields of their own
+    /// (note that [`IrpHandler::handle()`] does not take any arguments).
     fn new(
         device: &'a DEVICE_OBJECT,
         extension: &'a DeviceExtension,
@@ -26,8 +35,10 @@ pub trait IrpHandler<'a> {
     where
         Self: Sized;
 
-    /// # Safety
-    /// This handler will eventually be called by the OS when handling an IRP.
+    /// Handle the IRP request.
+    ///
+    /// Implementations should set the appropriate fields in the [`IRP::IoStatus`] structure, except
+    /// `Status`, as that field will be set automatically by the framework afterwards.
     fn handle(&mut self) -> Result<(), RuntimeError>;
 }
 

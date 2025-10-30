@@ -11,9 +11,18 @@ use crate::error::RuntimeError;
 use crate::handlers::irp::IrpHandler;
 use crate::state::DeviceExtension;
 
+/// Trait for handling IOCTL requests.
+///
+/// Each time an IOCTL request is received, an instance of a type implementing this trait
+/// will be created to handle the request.
 pub trait IoctlHandler<'a> {
+    /// The IOCTL code this handler is responsible for.
     const CODE: u32;
 
+    /// Create a new instance of the handler.
+    ///
+    /// Implementations should use this method to populate necessary fields of their own
+    /// (note that [`IoctlHandler::handle()`] does not take any arguments).
     fn new(
         device: &'a DEVICE_OBJECT,
         extension: &'a DeviceExtension,
@@ -23,11 +32,10 @@ pub trait IoctlHandler<'a> {
     where
         Self: Sized;
 
-    /// This handler will eventually be called by the OS when handling an IOCTL request
-    /// (i.e. `IRP_MJ_DEVICE_CONTROL`).
+    /// Handle the IOCTL request. In case of failure, [`IoctlHandler::on_failure()`] will be called.
     fn handle(&mut self) -> Result<(), RuntimeError>;
 
-    /// Clean up in case [`handle()`] fails.
+    /// Clean up in case [`IoctlHandler::handle()`] fails.
     ///
     /// The default implementation does nothing.
     fn on_failure(&mut self) {}
