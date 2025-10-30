@@ -21,12 +21,6 @@ jobs:
           cache: false
           rustflags: ""
 
-      - name: Setup repository
-        shell: cmd
-        run: |
-          extern\wdksetup.exe /features + /log "%cd%\wdksetup.log" /quiet
-          cargo install --locked cargo-make --no-default-features --features tls-native
-
       - name: Build documentation
         shell: cmd
         run: cargo doc --all-features --document-private-items
@@ -36,7 +30,4 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: build
-          path: |
-            wdksetup.log
-            target/release/logging_driver_package
-            target/release/user.exe
+          path: target/doc
