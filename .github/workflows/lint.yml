@@ -41,7 +41,9 @@ jobs:
           rustflags: ""
 
       - name: Setup repository
-        run: extern\wdksetup.exe /features + /q
+        run: |
+          extern\wdksetup.exe /features + /q
+          cargo install --locked cargo-make --no-default-features --features tls-native
 
       - name: Run clippy
         shell: cmd
