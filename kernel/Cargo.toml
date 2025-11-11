@@ -17,7 +17,7 @@ ouroboros = "0.18.5"
 postcard = { workspace = true }
 wdk = "0.3.1"
 wdk-alloc = "0.3.1"
-wdk-panic = "0.3.1"
+wdk-panic = "0.4.0"
 wdk-sys = "0.4.0"
 
 [build-dependencies]
